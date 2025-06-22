@@ -5,12 +5,21 @@
 在你的Ubuntu服务器（43.142.85.8）上执行以下命令：
 
 ```bash
+# 设置GitHub访问令牌（私有仓库必需）
+export GITHUB_TOKEN="your_github_token_here"
+
 # 使用指定的AUTH_TOKEN
 export AUTH_TOKEN="MCPhahaha_2025"
 
 # 下载并执行部署脚本
 curl -sSL https://raw.githubusercontent.com/austinzq/mcpssh/main/deploy-ubuntu.sh | sudo -E bash
 ```
+
+**注意**: 因为仓库是私有的，需要先创建GitHub访问令牌：
+1. 访问 https://github.com/settings/tokens
+2. 点击 "Generate new token (classic)"
+3. 选择 "repo" 权限
+4. 复制生成的令牌
 
 ## 方法2：下载后运行
 
@@ -20,6 +29,9 @@ wget https://raw.githubusercontent.com/austinzq/mcpssh/main/deploy-ubuntu.sh
 
 # 查看脚本内容（可选）
 cat deploy-ubuntu.sh
+
+# 设置GitHub访问令牌
+export GITHUB_TOKEN="your_github_token_here"
 
 # 设置认证令牌
 export AUTH_TOKEN="MCPhahaha_2025"

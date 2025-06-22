@@ -70,9 +70,24 @@ fi
 print_status "Cloning repository..."
 if [ -d "$APP_DIR" ]; then
     print_warning "Application directory already exists, pulling latest changes..."
-    sudo -u $APP_USER git -C $APP_DIR pull
+    cd $APP_DIR
+    if [ -n "$GITHUB_TOKEN" ]; then
+        sudo -u $APP_USER git pull https://$GITHUB_TOKEN@github.com/austinzq/mcpssh.git
+    else
+        sudo -u $APP_USER git pull
+    fi
 else
-    sudo -u $APP_USER git clone $REPO_URL $APP_DIR
+    if [ -n "$GITHUB_TOKEN" ]; then
+        print_status "Using GitHub token for private repository..."
+        sudo -u $APP_USER git clone https://$GITHUB_TOKEN@github.com/austinzq/mcpssh.git $APP_DIR
+    else
+        print_error "This is a private repository. Please set GITHUB_TOKEN environment variable."
+        echo "To create a GitHub token:"
+        echo "1. Go to https://github.com/settings/tokens"
+        echo "2. Generate a new token with 'repo' permissions"
+        echo "3. Run: export GITHUB_TOKEN=your_token_here"
+        exit 1
+    fi
 fi
 
 # Step 6: Install dependencies and build

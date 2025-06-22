@@ -6,6 +6,17 @@
 - **密码**: Mcp@20252025
 - **AUTH_TOKEN**: MCPhahaha_2025
 
+## 准备工作
+
+### 1. 创建GitHub访问令牌（私有仓库必需）
+
+1. 访问 https://github.com/settings/tokens
+2. 点击 "Generate new token (classic)"
+3. 设置Token名称：`MCP SSH Deployment`
+4. 选择权限：`repo` (Full control of private repositories)
+5. 点击 "Generate token"
+6. 复制生成的令牌（形如：`ghp_xxxxxxxxxxxxxxxxxxxx`）
+
 ## 一键部署命令
 
 在你的Ubuntu服务器（43.142.85.8）上执行：
@@ -13,6 +24,9 @@
 ```bash
 # SSH连接到服务器
 ssh root@43.142.85.8
+
+# 设置GitHub访问令牌（替换为你的实际令牌）
+export GITHUB_TOKEN="ghp_your_github_token_here"
 
 # 设置认证令牌
 export AUTH_TOKEN="MCPhahaha_2025"
