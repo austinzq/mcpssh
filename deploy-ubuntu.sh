@@ -68,18 +68,58 @@ fi
 
 # Step 5: Clone repository
 print_status "Cloning repository..."
+
+# Function to retry git operations
+git_retry() {
+    local cmd="$1"
+    local max_attempts=3
+    local attempt=1
+    
+    while [ $attempt -le $max_attempts ]; do
+        print_status "Git operation attempt $attempt/$max_attempts..."
+        if eval "$cmd"; then
+            return 0
+        else
+            if [ $attempt -eq $max_attempts ]; then
+                return 1
+            fi
+            print_warning "Git operation failed, retrying in 5 seconds..."
+            sleep 5
+            attempt=$((attempt + 1))
+        fi
+    done
+}
+
 if [ -d "$APP_DIR" ]; then
     print_warning "Application directory already exists, pulling latest changes..."
     cd $APP_DIR
+    
+    # Reset any local changes first
+    sudo -u $APP_USER git reset --hard HEAD >/dev/null 2>&1 || true
+    
     if [ -n "$GITHUB_TOKEN" ]; then
-        sudo -u $APP_USER git pull https://$GITHUB_TOKEN@github.com/austinzq/mcpssh.git
+        if ! git_retry "sudo -u $APP_USER git pull https://$GITHUB_TOKEN@github.com/austinzq/mcpssh.git main"; then
+            print_warning "Git pull failed, trying fresh clone..."
+            cd /var/lib/mcpssh
+            sudo -u $APP_USER rm -rf app
+            if ! git_retry "sudo -u $APP_USER git clone https://$GITHUB_TOKEN@github.com/austinzq/mcpssh.git app"; then
+                print_error "Failed to clone repository after multiple attempts"
+                exit 1
+            fi
+        fi
     else
-        sudo -u $APP_USER git pull
+        if ! git_retry "sudo -u $APP_USER git pull"; then
+            print_error "Git pull failed. Please set GITHUB_TOKEN for private repository."
+            exit 1
+        fi
     fi
 else
     if [ -n "$GITHUB_TOKEN" ]; then
         print_status "Using GitHub token for private repository..."
-        sudo -u $APP_USER git clone https://$GITHUB_TOKEN@github.com/austinzq/mcpssh.git $APP_DIR
+        if ! git_retry "sudo -u $APP_USER git clone https://$GITHUB_TOKEN@github.com/austinzq/mcpssh.git $APP_DIR"; then
+            print_error "Failed to clone repository after multiple attempts"
+            exit 1
+        fi
     else
         print_error "This is a private repository. Please set GITHUB_TOKEN environment variable."
         echo "To create a GitHub token:"
