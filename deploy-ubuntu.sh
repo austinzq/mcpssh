@@ -129,7 +129,7 @@ Group=mcpssh
 WorkingDirectory=/var/lib/mcpssh/app
 Environment="NODE_ENV=production"
 EnvironmentFile=/var/lib/mcpssh/app/.env
-ExecStart=/usr/bin/node /var/lib/mcpssh/app/dist/remote-server.js
+ExecStart=/usr/bin/node /var/lib/mcpssh/app/dist/mcp-http-server.js
 Restart=always
 RestartSec=10
 NoNewPrivileges=true

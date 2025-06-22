@@ -1,358 +1,275 @@
 # MCP SSH Server
 
-A Model Context Protocol (MCP) server that enables Claude to control servers via SSH for automated deployment, testing, and operations.
+A Model Context Protocol (MCP) HTTP server that enables Claude Code to control remote servers via SSH for automated deployment, testing, and operations.
 
 ## Features
 
 - **SSH Connection Management**: Connect to multiple SSH servers simultaneously
 - **Command Execution**: Execute commands on remote servers
 - **File Transfer**: Upload and download files via SFTP
-- **Connection Management**: List and manage active connections
-- **Secure**: Supports password authentication
+- **MCP HTTP Protocol**: Full compatibility with Claude Code
+- **Bearer Token Authentication**: Secure API access
+- **Auto-restart**: Systemd service with automatic recovery
+
+## Quick Start
+
+### 1. Deploy on Remote Server
+
+```bash
+# SSH to your server
+ssh root@your-server-ip
+
+# Set environment variables
+export GITHUB_TOKEN="your_github_token_here"
+export AUTH_TOKEN="your_secure_token_here"
+
+# One-click deployment
+curl -sSL https://raw.githubusercontent.com/austinzq/mcpssh/main/deploy-ubuntu.sh | sudo -E bash
+```
+
+### 2. Configure Claude Code
+
+```bash
+# Add the MCP server
+claude mcp add --transport http mcp-ssh https://your-server-ip:3000/mcp --header "Authorization: Bearer your_secure_token_here"
+
+# Verify connection
+claude mcp list
+```
+
+### 3. Use SSH Tools in Claude Code
+
+```
+Connect to server 192.168.1.100 with username ubuntu and password mypass, then check disk usage
+```
 
 ## Installation
 
-1. Clone the repository:
+### Prerequisites
+
+- Ubuntu 18.04+ server
+- Node.js 18+
+- Root or sudo access
+
+### Manual Installation
+
+1. **Install Node.js 18**:
 ```bash
-git clone <repository-url>
-cd mcpssh
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
 ```
 
-2. Install dependencies:
+2. **Clone and build**:
 ```bash
-npm install
-```
-
-3. Build the project:
-```bash
-npm run build
-```
-
-## Usage
-
-### Option 1: Local MCP Server (Standard)
-
-For development:
-```bash
-npm run dev
-```
-
-For production:
-```bash
-npm run build
-npm start
-```
-
-Configure Claude Desktop:
-
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-
-```json
-{
-  "mcpServers": {
-    "mcp-ssh": {
-      "command": "node",
-      "args": ["/path/to/mcpssh/dist/index.js"],
-      "env": {}
-    }
-  }
-}
-```
-
-### Option 2: Remote MCP Server (Network)
-
-This allows you to run the MCP server on a remote machine and connect to it from your local Claude Desktop.
-
-#### On the Remote Server:
-
-1. Deploy the code:
-```bash
-# On remote server (e.g., 43.142.85.8)
-git clone <repository-url>
+git clone https://github.com/austinzq/mcpssh.git
 cd mcpssh
 npm install
 npm run build
 ```
 
-2. Set environment variables:
+3. **Configure environment**:
 ```bash
-export MCP_PORT=3000  # or any available port
-export MCP_AUTH_TOKEN="your-secure-token-here"  # Generate a secure token
-```
-
-3. Start the remote server:
-```bash
-npm run start:remote
-# Or use PM2 for production:
-pm2 start dist/remote-server.js --name mcp-ssh-remote
-```
-
-4. Configure firewall:
-```bash
-# Allow the MCP port (e.g., 3000)
-sudo ufw allow 3000/tcp
-```
-
-#### On Your Local Machine:
-
-1. Clone and build the proxy:
-```bash
-git clone <repository-url>
-cd mcpssh
-npm install
-npm run build
-```
-
-2. Configure Claude Desktop to use the proxy:
-
-```json
-{
-  "mcpServers": {
-    "mcp-ssh-remote": {
-      "command": "node",
-      "args": ["/path/to/mcpssh/dist/client-proxy.js"],
-      "env": {
-        "MCP_REMOTE_URL": "ws://43.142.85.8:3000",
-        "MCP_AUTH_TOKEN": "your-secure-token-here"
-      }
-    }
-  }
-}
-```
-
-Replace:
-- `/path/to/mcpssh` with your local project path
-- `43.142.85.8:3000` with your remote server address and port
-- `your-secure-token-here` with the same token used on the server
-
-## Available Tools
-
-### ssh_connect
-Connect to a remote SSH server.
-
-**Parameters:**
-- `host` (required): SSH server hostname or IP address
-- `port` (optional): SSH server port (default: 22)
-- `username` (required): SSH username
-- `password` (required): SSH password
-
-**Returns:** Connection ID for use with other commands
-
-### ssh_execute
-Execute a command on a connected SSH server.
-
-**Parameters:**
-- `connectionId` (required): Connection ID from ssh_connect
-- `command` (required): Command to execute
-
-**Returns:** Command output
-
-### ssh_upload
-Upload a file to the remote server.
-
-**Parameters:**
-- `connectionId` (required): Connection ID from ssh_connect
-- `localPath` (required): Local file path
-- `remotePath` (required): Remote file path
-
-### ssh_download
-Download a file from the remote server.
-
-**Parameters:**
-- `connectionId` (required): Connection ID from ssh_connect
-- `remotePath` (required): Remote file path
-- `localPath` (required): Local file path
-
-### ssh_disconnect
-Disconnect from an SSH server.
-
-**Parameters:**
-- `connectionId` (required): Connection ID to disconnect
-
-### ssh_list_connections
-List all active SSH connections.
-
-**Returns:** List of active connections with their details
-
-## Example Usage in Claude
-
-1. Connect to a server:
-```
-Use ssh_connect to connect to server 43.142.85.8 with username root and password Mcp@20252025
-```
-
-2. Execute commands:
-```
-Use ssh_execute to run "ls -la" on the connected server
-```
-
-3. Upload files:
-```
-Use ssh_upload to upload local file "./deploy.sh" to "/home/user/deploy.sh" on the server
-```
-
-4. Download files:
-```
-Use ssh_download to download "/var/log/app.log" from the server to "./logs/app.log" locally
-```
-
-5. Disconnect:
-```
-Use ssh_disconnect to close the connection
-```
-
-## Security Considerations
-
-- Store credentials securely and never commit them to version control
-- Consider using SSH keys instead of passwords for production use
-- Limit access to the MCP server configuration
-- Use secure networks when connecting to remote servers
-
-### For Remote MCP Server:
-
-- **Always use HTTPS/WSS in production**: Replace `ws://` with `wss://` and use a reverse proxy like nginx with SSL
-- **Generate secure tokens**: Use this command to generate a secure token:
-  ```bash
-  openssl rand -hex 32
-  ```
-- **Restrict firewall**: Only allow connections from your IP:
-  ```bash
-  sudo ufw allow from YOUR_IP to any port 3000
-  ```
-- **Use environment files**: Never hardcode tokens in configuration files
-  ```bash
-  # Create .env file on remote server
-  echo "MCP_PORT=3000" > .env
-  echo "MCP_AUTH_TOKEN=$(openssl rand -hex 32)" >> .env
-  ```
-
-## Firewall Configuration
-
-### For SSH Target Servers
-
-The target servers you want to connect to need to have SSH port open:
-
-**Ubuntu/Debian:**
-```bash
-# Allow SSH (port 22)
-sudo ufw allow 22/tcp
-sudo ufw enable
-
-# Or allow from specific IP
-sudo ufw allow from YOUR_IP to any port 22
-```
-
-**CentOS/RHEL:**
-```bash
-# Allow SSH
-sudo firewall-cmd --permanent --add-service=ssh
-sudo firewall-cmd --reload
-```
-
-**Note:** The MCP server itself doesn't need any inbound ports open as it communicates via stdio with Claude Desktop.
-
-## Running as a Service
-
-### Option 1: Using PM2 (Recommended)
-
-1. Install PM2 globally:
-```bash
-npm install -g pm2
-```
-
-2. Create ecosystem file:
-```bash
-cat > ecosystem.config.js << 'EOF'
-module.exports = {
-  apps: [{
-    name: 'mcp-ssh',
-    script: './dist/index.js',
-    interpreter: 'node',
-    env: {
-      NODE_ENV: 'production'
-    },
-    error_file: './logs/error.log',
-    out_file: './logs/output.log',
-    log_file: './logs/combined.log',
-    time: true
-  }]
-};
+cat > .env << EOF
+MCP_PORT=3000
+MCP_AUTH_TOKEN=your_secure_token_here
 EOF
 ```
 
-3. Start the service:
+4. **Start server**:
 ```bash
-npm run build
-pm2 start ecosystem.config.js
-pm2 save
-pm2 startup  # Follow the instructions to enable auto-start
+npm run start:mcp
 ```
 
-### Option 2: Using systemd (Linux)
+## Available Tools
 
-1. Create service file:
-```bash
-sudo nano /etc/systemd/system/mcp-ssh.service
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `ssh_connect` | Connect to SSH server | host, username, password, port? |
+| `ssh_execute` | Execute command | connectionId, command |
+| `ssh_upload` | Upload file to server | connectionId, localPath, remotePath |
+| `ssh_download` | Download file from server | connectionId, remotePath, localPath |
+| `ssh_disconnect` | Disconnect from server | connectionId |
+| `ssh_list_connections` | List active connections | - |
+
+## API Endpoints
+
+### Health Check
+```http
+GET /health
 ```
 
-2. Add the following content:
-```ini
-[Unit]
-Description=MCP SSH Server
-After=network.target
-
-[Service]
-Type=simple
-User=your-username
-WorkingDirectory=/path/to/mcpssh
-ExecStart=/usr/bin/node /path/to/mcpssh/dist/index.js
-Restart=on-failure
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
+### MCP Protocol Endpoints
+```http
+POST /mcp/initialize
+POST /mcp/tools/list
+POST /mcp/tools/call
+POST /mcp/resources/list
+POST /mcp/prompts/list
 ```
 
-3. Enable and start the service:
+All MCP endpoints require `Authorization: Bearer <token>` header.
+
+## Configuration
+
+### Environment Variables
+
+- `MCP_PORT`: Server port (default: 3000)
+- `MCP_AUTH_TOKEN`: Authentication token (required)
+
+### Systemd Service
+
+The deployment script creates a systemd service at `/etc/systemd/system/mcp-ssh.service`:
+
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable mcp-ssh
-sudo systemctl start mcp-ssh
+# Service management
 sudo systemctl status mcp-ssh
+sudo systemctl restart mcp-ssh
+sudo journalctl -u mcp-ssh -f
 ```
 
-### Option 3: Using Docker
+## Security
 
-1. Create Dockerfile:
-```dockerfile
-FROM node:18-alpine
+### Firewall Configuration
 
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci --only=production
-
-COPY . .
-RUN npm run build
-
-CMD ["node", "dist/index.js"]
-```
-
-2. Build and run:
 ```bash
-docker build -t mcp-ssh .
-docker run -d --name mcp-ssh --restart always mcp-ssh
+# Allow MCP port
+sudo ufw allow 3000/tcp
+
+# Or restrict to specific IP
+sudo ufw allow from YOUR_IP to any port 3000 proto tcp
+```
+
+### SSL/HTTPS (Recommended)
+
+Use nginx as reverse proxy:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name your-domain.com;
+    
+    location /mcp {
+        proxy_pass http://localhost:3000/mcp;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Authorization $http_authorization;
+    }
+}
+```
+
+Then configure Claude Code:
+```bash
+claude mcp add --transport http mcp-ssh https://your-domain.com/mcp --header "Authorization: Bearer your_token"
+```
+
+## Usage Examples
+
+### Basic SSH Operations
+
+```
+# Connect to a server
+Use ssh_connect to connect to server 192.168.1.100 with username ubuntu and password mypass
+
+# Check system status
+Execute "top -n 1" command on the connected server to see current processes
+
+# Upload a deployment script
+Upload local file "./deploy.sh" to remote path "/tmp/deploy.sh" on the connected server
+
+# Run the deployment
+Execute "chmod +x /tmp/deploy.sh && /tmp/deploy.sh" on the server
+
+# Download logs
+Download "/var/log/app.log" from server to local "./logs/app.log"
+
+# Disconnect
+Disconnect from the server
+```
+
+### Advanced Automation
+
+```
+# Multi-server deployment
+Connect to multiple servers (web1, web2, db1) and deploy the latest application version, then verify all services are running properly
+
+# System monitoring
+Check disk usage, memory, and CPU on all connected servers and create a summary report
+
+# Log analysis
+Download and analyze error logs from the last 24 hours across all production servers
 ```
 
 ## Development
 
-- `npm run dev`: Run in development mode with hot reload
-- `npm run build`: Build the TypeScript project
-- `npm start`: Run the built project
+```bash
+# Development mode
+npm run dev:mcp
+
+# Build project
+npm run build
+
+# Production mode
+npm run start:mcp
+```
+
+## Troubleshooting
+
+### Service Issues
+
+```bash
+# Check service status
+sudo systemctl status mcp-ssh
+
+# View logs
+sudo journalctl -u mcp-ssh -n 50
+
+# Test manually
+sudo -u mcpssh MCP_PORT=3000 MCP_AUTH_TOKEN=test node dist/mcp-http-server.js
+```
+
+### Connection Issues
+
+```bash
+# Test health endpoint
+curl http://localhost:3000/health
+
+# Test with authentication
+curl -H "Authorization: Bearer your_token" \
+     -X POST \
+     -H "Content-Type: application/json" \
+     -d '{}' \
+     http://localhost:3000/mcp/tools/list
+
+# Check firewall
+sudo ufw status
+```
+
+### Claude Code Issues
+
+```bash
+# Remove and re-add server
+claude mcp remove mcp-ssh
+claude mcp add --transport http mcp-ssh https://your-server:3000/mcp --header "Authorization: Bearer your_token"
+
+# Check MCP status
+claude mcp
+```
+
+## Updates
+
+```bash
+# Update server (created by deployment script)
+sudo update-mcp-ssh
+```
 
 ## License
 
 ISC
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
