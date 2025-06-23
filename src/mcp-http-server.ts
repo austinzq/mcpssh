@@ -221,6 +221,18 @@ app.post('/mcp', (req, res) => {
       handleToolCall(req, res, id);
       return;
     }
+    
+    case 'resources/list':
+      res.json(createJsonRpcResponse(id, {
+        resources: []
+      }));
+      break;
+      
+    case 'prompts/list':
+      res.json(createJsonRpcResponse(id, {
+        prompts: []
+      }));
+      break;
       
     default:
       // Default initialize response for empty requests
