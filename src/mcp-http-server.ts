@@ -62,23 +62,339 @@ app.use('/mcp', authenticate);
 
 // MCP HTTP Transport Endpoints
 
+// JSON-RPC 2.0 helper function
+const createJsonRpcResponse = (id: any, result?: any, error?: any) => {
+  const response: any = {
+    jsonrpc: '2.0',
+    id: id
+  };
+  
+  if (error) {
+    response.error = error;
+  } else {
+    response.result = result;
+  }
+  
+  return response;
+};
+
 // Handle base /mcp POST requests (for Claude Code compatibility)
-app.post('/mcp', (_req, res) => {
-  // Claude Code sends an initial POST to /mcp to check connectivity
-  // We'll treat this as an initialize request
-  res.json({
-    protocolVersion: '2024-11-05',
-    capabilities: {
-      tools: {},
-      resources: {},
-      prompts: {}
-    },
-    serverInfo: {
-      name: 'mcp-ssh-server',
-      version: '1.0.0'
+app.post('/mcp', (req, res) => {
+  const { id, method, params } = req.body;
+  
+  // Handle different MCP methods
+  switch (method) {
+    case 'initialize':
+      res.json(createJsonRpcResponse(id, {
+        protocolVersion: '2024-11-05',
+        capabilities: {
+          tools: {},
+          resources: {},
+          prompts: {}
+        },
+        serverInfo: {
+          name: 'mcp-ssh-server',
+          version: '1.0.0'
+        }
+      }));
+      break;
+      
+    case 'tools/list':
+      res.json(createJsonRpcResponse(id, {
+        tools: [
+          {
+            name: 'ssh_connect',
+            description: 'Connect to a remote server via SSH',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                host: { 
+                  type: 'string', 
+                  description: 'SSH server hostname or IP address' 
+                },
+                port: { 
+                  type: 'number', 
+                  description: 'SSH server port (default: 22)', 
+                  default: 22 
+                },
+                username: { 
+                  type: 'string', 
+                  description: 'SSH username' 
+                },
+                password: { 
+                  type: 'string', 
+                  description: 'SSH password' 
+                },
+              },
+              required: ['host', 'username', 'password'],
+            },
+          },
+          {
+            name: 'ssh_execute',
+            description: 'Execute a command on the connected SSH server',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                connectionId: { 
+                  type: 'string', 
+                  description: 'Connection ID from ssh_connect' 
+                },
+                command: { 
+                  type: 'string', 
+                  description: 'Command to execute' 
+                },
+              },
+              required: ['connectionId', 'command'],
+            },
+          },
+          {
+            name: 'ssh_upload',
+            description: 'Upload a file to the remote server',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                connectionId: { 
+                  type: 'string', 
+                  description: 'Connection ID from ssh_connect' 
+                },
+                localPath: { 
+                  type: 'string', 
+                  description: 'Local file path' 
+                },
+                remotePath: { 
+                  type: 'string', 
+                  description: 'Remote file path' 
+                },
+              },
+              required: ['connectionId', 'localPath', 'remotePath'],
+            },
+          },
+          {
+            name: 'ssh_download',
+            description: 'Download a file from the remote server',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                connectionId: { 
+                  type: 'string', 
+                  description: 'Connection ID from ssh_connect' 
+                },
+                remotePath: { 
+                  type: 'string', 
+                  description: 'Remote file path' 
+                },
+                localPath: { 
+                  type: 'string', 
+                  description: 'Local file path' 
+                },
+              },
+              required: ['connectionId', 'remotePath', 'localPath'],
+            },
+          },
+          {
+            name: 'ssh_disconnect',
+            description: 'Disconnect from the SSH server',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                connectionId: { 
+                  type: 'string', 
+                  description: 'Connection ID to disconnect' 
+                },
+              },
+              required: ['connectionId'],
+            },
+          },
+          {
+            name: 'ssh_list_connections',
+            description: 'List all active SSH connections',
+            inputSchema: {
+              type: 'object',
+              properties: {},
+            },
+          },
+        ]
+      }));
+      break;
+      
+    case 'tools/call': {
+      handleToolCall(req, res, id);
+      return;
     }
-  });
+      
+    default:
+      // Default initialize response for empty requests
+      res.json(createJsonRpcResponse(id || 1, {
+        protocolVersion: '2024-11-05',
+        capabilities: {
+          tools: {},
+          resources: {},
+          prompts: {}
+        },
+        serverInfo: {
+          name: 'mcp-ssh-server',
+          version: '1.0.0'
+        }
+      }));
+  }
 });
+
+// Handle tool calls with JSON-RPC 2.0 support
+async function handleToolCall(req: express.Request, res: express.Response, id: any): Promise<void> {
+  const { params } = req.body;
+  const { name, arguments: args } = params || {};
+
+  if (!name) {
+    res.json(createJsonRpcResponse(id, null, {
+      code: -32602,
+      message: 'Invalid params',
+      data: 'Tool name is required'
+    }));
+    return;
+  }
+
+  try {
+    let content: any[] = [];
+
+    switch (name) {
+      case 'ssh_connect': {
+        const { host, port = 22, username, password } = args || {};
+        if (!host || !username || !password) {
+          res.json(createJsonRpcResponse(id, null, {
+            code: -32602,
+            message: 'Invalid params',
+            data: 'Host, username, and password are required'
+          }));
+          return;
+        }
+        
+        const connectionId = await sshManager.connect({ host, port, username, password });
+        content = [
+          {
+            type: 'text',
+            text: `Successfully connected to ${host}:${port}. Connection ID: ${connectionId}`,
+          },
+        ];
+        break;
+      }
+
+      case 'ssh_execute': {
+        const { connectionId, command } = args || {};
+        if (!connectionId || !command) {
+          res.json(createJsonRpcResponse(id, null, {
+            code: -32602,
+            message: 'Invalid params',
+            data: 'Connection ID and command are required'
+          }));
+          return;
+        }
+        
+        const output = await sshManager.execute(connectionId, command);
+        content = [
+          {
+            type: 'text',
+            text: output,
+          },
+        ];
+        break;
+      }
+
+      case 'ssh_upload': {
+        const { connectionId, localPath, remotePath } = args || {};
+        if (!connectionId || !localPath || !remotePath) {
+          res.json(createJsonRpcResponse(id, null, {
+            code: -32602,
+            message: 'Invalid params',
+            data: 'Connection ID, local path, and remote path are required'
+          }));
+          return;
+        }
+        
+        await sshManager.upload(connectionId, localPath, remotePath);
+        content = [
+          {
+            type: 'text',
+            text: `Successfully uploaded ${localPath} to ${remotePath}`,
+          },
+        ];
+        break;
+      }
+
+      case 'ssh_download': {
+        const { connectionId, remotePath, localPath } = args || {};
+        if (!connectionId || !remotePath || !localPath) {
+          res.json(createJsonRpcResponse(id, null, {
+            code: -32602,
+            message: 'Invalid params',
+            data: 'Connection ID, remote path, and local path are required'
+          }));
+          return;
+        }
+        
+        await sshManager.download(connectionId, remotePath, localPath);
+        content = [
+          {
+            type: 'text',
+            text: `Successfully downloaded ${remotePath} to ${localPath}`,
+          },
+        ];
+        break;
+      }
+
+      case 'ssh_disconnect': {
+        const { connectionId } = args || {};
+        if (!connectionId) {
+          res.json(createJsonRpcResponse(id, null, {
+            code: -32602,
+            message: 'Invalid params',
+            data: 'Connection ID is required'
+          }));
+          return;
+        }
+        
+        await sshManager.disconnect(connectionId);
+        content = [
+          {
+            type: 'text',
+            text: `Disconnected from connection ${connectionId}`,
+          },
+        ];
+        break;
+      }
+
+      case 'ssh_list_connections': {
+        const connections = sshManager.listConnections();
+        content = [
+          {
+            type: 'text',
+            text: connections.length > 0
+              ? `Active connections:\n${connections.map(c => `- ${c.id}: ${c.host}:${c.port} (${c.username})`).join('\n')}`
+              : 'No active connections',
+          },
+        ];
+        break;
+      }
+
+      default:
+        res.json(createJsonRpcResponse(id, null, {
+          code: -32601,
+          message: 'Method not found',
+          data: `Unknown tool: ${name}`
+        }));
+        return;
+    }
+
+    res.json(createJsonRpcResponse(id, { content }));
+
+  } catch (error) {
+    console.error(`Error executing tool ${name}:`, error);
+    res.json(createJsonRpcResponse(id, null, {
+      code: -32603,
+      message: 'Internal error',
+      data: error instanceof Error ? error.message : String(error)
+    }));
+  }
+}
 
 // Initialize the MCP connection
 app.post('/mcp/initialize', (req, res) => {
