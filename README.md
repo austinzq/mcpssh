@@ -31,7 +31,7 @@ curl -sSL https://raw.githubusercontent.com/austinzq/mcpssh/main/deploy-ubuntu.s
 
 ```bash
 # Add the MCP server
-claude mcp add --transport http mcp-ssh https://your-server-ip:3000/mcp --header "Authorization: Bearer your_secure_token_here"
+claude mcp add --transport http mcp-ssh https://your-server-ip:3000/mcp --header "Authorization: Bearer XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 # Verify connection
 claude mcp list
@@ -40,7 +40,7 @@ claude mcp list
 ### 3. Use SSH Tools in Claude Code
 
 ```
-Connect to server 192.168.1.100 with username ubuntu and password mypass, then check disk usage
+Connect to server 192.168.1.100 with username ubuntu and password XXXXXX, then check disk usage
 ```
 
 ## Installation
@@ -71,7 +71,7 @@ npm run build
 ```bash
 cat > .env << EOF
 MCP_PORT=3000
-MCP_AUTH_TOKEN=your_secure_token_here
+MCP_AUTH_TOKEN=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 EOF
 ```
 
@@ -159,7 +159,7 @@ server {
 
 Then configure Claude Code:
 ```bash
-claude mcp add --transport http mcp-ssh https://your-domain.com/mcp --header "Authorization: Bearer your_token"
+claude mcp add --transport http mcp-ssh https://your-domain.com/mcp --header "Authorization: Bearer XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ```
 
 ## Usage Examples
@@ -168,7 +168,7 @@ claude mcp add --transport http mcp-ssh https://your-domain.com/mcp --header "Au
 
 ```
 # Connect to a server
-Use ssh_connect to connect to server 192.168.1.100 with username ubuntu and password mypass
+Use ssh_connect to connect to server 192.168.1.100 with username ubuntu and password XXXXXX
 
 # Check system status
 Execute "top -n 1" command on the connected server to see current processes
@@ -234,7 +234,7 @@ sudo -u mcpssh MCP_PORT=3000 MCP_AUTH_TOKEN=test node dist/mcp-http-server.js
 curl http://localhost:3000/health
 
 # Test with authentication
-curl -H "Authorization: Bearer your_token" \
+curl -H "Authorization: Bearer XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" \
      -X POST \
      -H "Content-Type: application/json" \
      -d '{}' \
@@ -249,7 +249,7 @@ sudo ufw status
 ```bash
 # Remove and re-add server
 claude mcp remove mcp-ssh
-claude mcp add --transport http mcp-ssh https://your-server:3000/mcp --header "Authorization: Bearer your_token"
+claude mcp add --transport http mcp-ssh https://your-server:3000/mcp --header "Authorization: Bearer XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 # Check MCP status
 claude mcp
@@ -258,7 +258,10 @@ claude mcp
 ## Updates
 
 ```bash
-# Update server (created by deployment script)
+# One-click update command
+curl -sSL https://raw.githubusercontent.com/austinzq/mcpssh/main/update-server.sh | sudo bash
+
+# Or use the built-in update script (created by deployment script)
 sudo update-mcp-ssh
 ```
 

@@ -9,7 +9,7 @@ SSH to your remote server and run:
 ### Method 1: Automatic Deployment (Recommended)
 ```bash
 export GITHUB_TOKEN="your_github_token_here"
-export AUTH_TOKEN="MCPhahaha_2025"
+export AUTH_TOKEN="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 curl -sSL https://raw.githubusercontent.com/austinzq/mcpssh/main/deploy-ubuntu.sh | sudo -E bash
 ```
 
@@ -22,7 +22,7 @@ git clone https://github.com/austinzq/mcpssh.git
 cd mcpssh
 
 # Set environment and deploy
-export AUTH_TOKEN="MCPhahaha_2025"
+export AUTH_TOKEN="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 sudo -E ./local-deploy.sh
 ```
 
@@ -30,7 +30,7 @@ sudo -E ./local-deploy.sh
 If you encounter Git connection errors like "TLS connection was non-properly terminated":
 
 ```bash
-export AUTH_TOKEN="MCPhahaha_2025"
+export AUTH_TOKEN="XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 curl -sSL https://raw.githubusercontent.com/austinzq/mcpssh/main/manual-fix.sh | sudo -E bash
 ```
 
@@ -39,7 +39,7 @@ This method downloads the code via HTTPS instead of Git.
 ## Step 2: Configure Claude Code
 
 ```bash
-claude mcp add --transport http mcp-ssh https://43.142.85.8:3000/mcp --header "Authorization: Bearer MCPhahaha_2025"
+claude mcp add --transport http mcp-ssh https://your-server-ip:3000/mcp --header "Authorization: Bearer XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ```
 
 ## Step 3: Test
@@ -58,7 +58,7 @@ You should see:
 
 Now ask Claude Code:
 ```
-Connect to server 192.168.1.100 with username ubuntu and password mypass, then show me the current disk usage
+Connect to server 192.168.1.100 with username ubuntu and password XXXXXX, then show me the current disk usage
 ```
 
 ## Troubleshooting
