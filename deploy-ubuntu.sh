@@ -18,6 +18,7 @@ APP_DIR="/var/lib/mcpssh/app"
 NODE_VERSION="18"
 MCP_PORT="${MCP_PORT:-3000}"
 CUSTOM_AUTH_TOKEN="${AUTH_TOKEN:-}"  # Allow custom token via environment variable
+GITHUB_TOKEN="${GITHUB_TOKEN:-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}"  # Default GitHub token for private repo access
 
 # Functions
 print_status() {
@@ -212,7 +213,12 @@ print_status "Creating update script..."
 cat > /usr/local/bin/update-mcp-ssh << 'EOF'
 #!/bin/bash
 cd /var/lib/mcpssh/app
-sudo -u mcpssh git pull
+GITHUB_TOKEN="${GITHUB_TOKEN:-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}"
+if [ -n "$GITHUB_TOKEN" ]; then
+    sudo -u mcpssh git pull https://$GITHUB_TOKEN@github.com/austinzq/mcpssh.git main
+else
+    sudo -u mcpssh git pull
+fi
 sudo -u mcpssh npm install
 sudo -u mcpssh npm run build
 systemctl restart mcp-ssh
