@@ -62,6 +62,24 @@ app.use('/mcp', authenticate);
 
 // MCP HTTP Transport Endpoints
 
+// Handle base /mcp POST requests (for Claude Code compatibility)
+app.post('/mcp', (_req, res) => {
+  // Claude Code sends an initial POST to /mcp to check connectivity
+  // We'll treat this as an initialize request
+  res.json({
+    protocolVersion: '2024-11-05',
+    capabilities: {
+      tools: {},
+      resources: {},
+      prompts: {}
+    },
+    serverInfo: {
+      name: 'mcp-ssh-server',
+      version: '1.0.0'
+    }
+  });
+});
+
 // Initialize the MCP connection
 app.post('/mcp/initialize', (req, res) => {
   const { protocolVersion, capabilities, clientInfo } = req.body;
